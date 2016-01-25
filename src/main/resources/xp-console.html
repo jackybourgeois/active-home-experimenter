@@ -1,0 +1,198 @@
+<!--
+  #%L
+  Active Home :: Experimenter
+  $Id:$
+  $HeadURL:$
+  %%
+  Copyright (C) 2016 Active Home Project
+  %%
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as
+  published by the Free Software Foundation, either version 3 of the 
+  License, or (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public 
+  License along with this program.  If not, see
+  <http://www.gnu.org/licenses/gpl-3.0.html>.
+  #L%
+  -->
+<link rel="import" href="/context/metricrecord-view.html">
+<link rel="import" href="/context/schedule-view.html">
+
+<dom-module id="xp-console">
+
+    <template>
+        <style>
+            #console {
+                font-family:"Courier New", Courier, monospace;
+                background-color:black;
+                height:400px;
+                color:white;
+                overflow:auto;
+                text-align: left;
+                margin:20px;
+                -webkit-box-shadow: 0 0 15px rgba(0,0,0,1);
+                -moz-box-shadow: 0 0 15px rgba(0,0,0,1);
+                box-shadow: 0 0 15px rgba(0,0,0,1);
+            }
+
+            #input {
+                font-family:"Courier New", Courier, monospace;
+                color:white;
+                background-color:transparent;
+                width:100%;
+                resize: none;
+                border: none;
+                font-size: 12px;
+                outline: none;
+                -webkit-box-shadow: none;
+                -moz-box-shadow: none;
+                box-shadow: none;
+                margin-top:-22px;
+                padding:0px;
+                height:100px
+            }
+
+            .error {
+                font-weight:bold;
+                color:#CC0000;
+            }
+
+        </style>
+
+        <div id="console">
+            <span id="output"></span><br>
+            <span id="prefix" style="vertical-align:top;">[]$></span>
+            <textarea id="input" on-keyup="consoleInput"></textarea>
+        </div>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: 'xp-console',
+            properties: {
+                executor: String,
+                metrics: String,
+                userId: {
+                    type: String,
+                    value: "",
+                    observer: "updateConsoleCursor"
+                }
+            },
+            cmdHisto: [""],
+            cursorHisto: 0,
+
+            ready: function() {
+                this.$.input.style.textIndent = this.$.prefix.offsetWidth +"px";
+                var comp = this;
+                window.addEventListener('websocket-ready', function(e) {
+                    comp.websocketConnected();
+                });
+                window.addEventListener('websocket-loggedIn', function(e) {
+                    comp.userId = e.detail.userId;
+                });
+                window.addEventListener('sent-ajax', function(e) {
+                    comp.print(e.detail.url);
+                    if (e.detail.body!=undefined) {
+                        comp.print(e.detail.body);
+                    }
+                });
+            },
+
+            updateConsoleCursor: function() {
+                this.$.prefix.innerHTML = "[" + this.userId + "@" + this.executor + "]$>";
+                this.$.input.style.textIndent = this.$.prefix.offsetWidth +"px";
+            },
+
+            consoleInput: function(e, detail, sender) {
+                key = e.keyCode;
+                if (key == 13) {
+                    var cmd = this.$.input.value.replace("\n","");
+                    this.print("["+ this.userId +"@"+this.executor+"]$>" + cmd);
+                    this.execCmd(cmd);
+                    if (this.cmdHisto[this.cursorHisto]!=cmd) {
+                        this.cmdHisto.unshift(cmd);
+                        this.cursorHisto = 0;
+                    }
+                    this.$.input.value = "";
+                    return false;
+                } else if (key == 38) {
+                    if (this.cursorHisto<this.cmdHisto.length-1 && this.cmdHisto[this.cursorHisto]!=undefined) {
+                        this.$.input.value = this.cmdHisto[this.cursorHisto];
+                        this.cursorHisto++;
+                    }
+                    return false;
+                } else if (key == 40) {
+                    if (this.cursorHisto>0) {
+                        this.$.input.value = this.cmdHisto[this.cursorHisto];
+                        this.cursorHisto--;
+                    }
+                    return false;
+                } else {
+                    return true;
+                }
+            },
+
+            execCmd: function(cmd) {
+                if (cmd=="clear") {
+                    this.clear();
+                } else if (this.executor!=null) {
+                    console.log("xp-console transmit to web-socket");
+                    document.querySelector("web-socket").request(this.id, this.executor, "execute", cmd);
+                }
+            },
+
+            print: function(str) {
+                this.$.output.innerHTML += str + "<br>";
+            },
+
+            error: function(str) {
+                this.$.output.innerHTML += "<span class=\"error\">" + str + "</span><br>";
+            },
+
+            clear: function() {
+                this.$.output.innerHTML = "";
+            },
+
+            input: function(json) {
+                if (json.hasOwnProperty("result")) {
+                    if (typeof json.result === 'object') {
+                        for (var key in json.result) {
+                            var dp = JSON.parse(json.result[key].value);
+                            console.log(dp);
+                            if (dp.type=="org.activehome.context.data.MetricRecord") {
+                                var mod = document.createElement("metricrecord-view");
+                                if (typeof mod.init === "function") mod.init(null,dp);
+                                this.$.output.appendChild(mod);
+                            } else if (dp.type=="org.activehome.energy.library.schedule.Schedule") {
+                                var mod = document.createElement("schedule-view");
+                                if (typeof mod.init === "function") mod.init(null,dp);
+                                this.$.output.appendChild(mod);
+                            }
+                        }
+                    } else {
+                        this.print(json.result.replace(/\n/g,"<br>"));
+                    }
+                } else if (json.content.type=="org.activehome.com.error.Error") {
+                    this.error(json.content.errorType + " - " + json.content.details);
+                } else {
+                    this.print(json.content.value.replace(/\n/g,"<br>"));
+                }
+            },
+
+            websocketConnected: function() {
+                var listenerArray = this.metrics.split(",");
+                for (var key in listenerArray) {
+                    document.querySelector("web-socket").subscribe(this.id, listenerArray[key], this);
+                }
+            }
+
+        });
+    </script>
+</dom-module>

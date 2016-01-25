@@ -1,0 +1,115 @@
+<!--
+  #%L
+  Active Home :: Experimenter
+  $Id:$
+  $HeadURL:$
+  %%
+  Copyright (C) 2016 Active Home Project
+  %%
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as
+  published by the Free Software Foundation, either version 3 of the 
+  License, or (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public 
+  License along with this program.  If not, see
+  <http://www.gnu.org/licenses/gpl-3.0.html>.
+  #L%
+  -->
+<dom-module id="comp-topo-item">
+
+    <template>
+        <style>
+            .box {
+                stroke: #000000;
+                stroke-width: 2;
+                cursor: pointer
+            }
+
+            .text {
+                font-size: 12.5px;
+                text-anchor: middle;
+                cursor: pointer
+            }
+        </style>
+
+        <svg xmlns="http://www.w3.org/2000/svg" width="100" height="30" viewBox="0 0 100 30">
+            <rect class="box" fill$="{{colour}}" id="comp-box"
+                  width="100" height="30" x="0" y="0" ry="5" rx="5"
+                  on-click="click"/>
+            <text class="text" x="50" y="20" id="comp-box-text" on-click="click">
+                {{compId}}
+            </text>
+        </svg>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'comp-topo-item',
+            properties: {
+                compId: {
+                    type: String,
+                    value: "-"
+                },
+                td: {
+                    type: String,
+                    value: "",
+                    observer: "updateTD"
+                },
+                colour: {
+                    type: String,
+                    value: "#666666"
+                }
+            },
+            lowestGenericType: "",
+
+            ready: function () {
+                this.getColourFromType();
+            },
+
+            updateTD: function() {
+                this.getColourFromType();
+            },
+
+            click: function () {
+                this.fire('select-comp', {compId: this.compId, td: this.lowestGenericType});
+            },
+
+            getColourFromType: function () {
+                if (this.td!=undefined) {
+                    var i=0;
+                    var colourFound = false;
+                    while (i<this.td.length && !colourFound) {
+                        colourFound = true;
+                        this.lowestGenericType = this.td[i];
+                        if (this.td[i]=="IO") {
+                            this.colour = "#d38d5f"
+                        } else if (this.td[i]=="API") {
+                            this.colour = "#afdde9"
+                        }  else if (this.td[i]=="Store") {
+                            this.colour = "#93ac93"
+                        } else if (this.td[i]=="Predictor") {
+                            this.colour = "#ffaa80"
+                        } else if (this.td[i]=="Evaluator") {
+                            this.colour = "#ffce80"
+                        } else if (this.td[i]=="Context") {
+                            this.colour = "#e980ff"
+                        } else if (this.td[i]=="Service") {
+                            this.colour = "#ffe680";
+                        } else if (this.td[i]=="User") {
+                            this.colour = "#aaffaa";
+                        } else {
+                            colourFound = false;
+                        }
+                        i++;
+                    }
+                }
+            }
+        });
+    </script>
+</dom-module>

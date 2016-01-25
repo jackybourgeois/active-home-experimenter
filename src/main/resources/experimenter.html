@@ -1,0 +1,98 @@
+<!--
+  #%L
+  Active Home :: Experimenter
+  $Id:$
+  $HeadURL:$
+  %%
+  Copyright (C) 2016 Active Home Project
+  %%
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as
+  published by the Free Software Foundation, either version 3 of the 
+  License, or (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public 
+  License along with this program.  If not, see
+  <http://www.gnu.org/licenses/gpl-3.0.html>.
+  #L%
+  -->
+<!DOCTYPE html>
+
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+
+    <script src="/bower_components/webcomponentsjs/webcomponents-lite.min.js"></script>
+    <link rel="import" href="/bower_components/polymer/polymer.html">
+    <link rel="import" href="/bower_components/paper-styles/paper-styles.html">
+    <link rel="import" href="/${id}/xp-console.html">
+    <link rel="import" href="/${id}/xp-settings.html">
+    <link rel="import" href="/${id}/comp-view.html">
+    <link rel="import" href="/ws/web-socket.html">
+    <link rel="import" href="/timekeeper/timekeeper-view.html">
+
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Active Home - Xp</title>
+    <meta name="description" content="Active Home Experimenter">
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: RobotoDraft, 'Helvetica Neue', Helvetica, Arial;
+            background: rgb(76,76,76);
+            height: 100%;
+        }
+        h1 {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+
+</head>
+<body>
+
+<web-socket url="${wsURI}"></web-socket>
+
+<header style="height: 40px;background-color: black;text-align: center;box-shadow: black">
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" id="ws-icon" style="float: right;margin: 3px">
+        <path id="ws-icon-path" style="stroke:#b5b2b2;stroke-width:2.0;stroke-linecap:round;stroke-linejoin:round;"
+              d="m 12.476954,5.3145 c 9.977342,0.062 17.024983,1.7469 17.144583,17.0085 m -17.144583,-12.7905 c 10.493009,-0.7047 13.307921,3.5776 13.062539,12.9266 m -12.926471,-8.8446 c 5.759232,-0.8908 9.949443,1.0665 8.844427,8.8446 m -4.800233,2.2268 c 0.04332,0.3032 -0.46847,-1.2252 -0.650238,-1.4356 -0.181763,-0.22 -0.411358,-0.4256 -0.688786,-0.6171 -0.267862,-0.192 -0.564424,-0.3874 -0.889684,-0.5882 -0.315694,-0.201 -0.612256,-0.4355 -0.889684,-0.7033 -0.267862,-0.2676 -0.492674,-0.5835 -0.674438,-0.9469 -0.181762,-0.3636 -0.272645,-0.8085 -0.272645,-1.3347 0,-0.4879 0.07175,-0.8991 0.215247,-1.234 0.153064,-0.3442 0.358743,-0.6218 0.617039,-0.8323 0.258295,-0.2199 0.564422,-0.3778 0.918383,-0.4736 0.35396,-0.104 0.731835,-0.158 1.133628,-0.158 0.48789,0 0.9423,0.048 1.363225,0.144 0.420926,0.096 0.770103,0.2249 1.047531,0.3873 l -0.55964,1.5929 c -0.16263,-0.116 -1.208961,-0.6449 -1.534221,-0.7405 0.786613,0.02 -1.923823,-0.2904 -1.857164,1.6122 -0.283683,0.2943 0.714897,1.0589 1.053941,1.236 0.277428,0.192 0.57399,0.3922 0.889685,0.6026 0.32526,0.2008 0.62182,0.4401 0.889683,0.7174 0.277428,0.2679 0.507025,0.5885 0.688787,0.9616 0.181763,0.3634 0.272645,0.7987 0.272645,1.3057 -0.09723,1.0063 -0.158141,1.0113 -0.392185,1.5163 -0.267862,0.2391 -0.704741,0.8004 -1.0874,0.9248 -0.38266,0.124 -0.808369,0.186 -1.277127,0.186 -0.593122,0 -1.114496,-0.055 -1.564121,-0.172 -0.440059,-0.114 -0.779669,-0.2439 -1.018831,-0.3872 l 0.588339,-1.6217 c 0.19133,0.1161 0.454408,0.2295 0.789235,0.3443 0.334828,0.116 1.354358,0.5029 1.737017,0.5029 0.956649,0 0.904584,-2.519 1.010181,-1.7802 z m -12.5439517,-2.2675 0.7253581,1.8564 -0.037314,-0.7893 1.6058596,-0.5766 0.357695,-1.8616 -0.011602,-1.6992 -0.4405389,3.8255 4.0281689,0.4866 -0.131397,0.2358 -0.7389352,0.9481 0.8424842,-8.2807 1.836766,0 -2.252908,10.1165 -1.2771266,0 -1.4062738,-5.539 -0.422542,-1.7058 0.069849,0.6136 -0.077798,1.1066 -1.4062741,5.5246 -1.3345254,0 -2.2385587,-10.1165 1.6170209,0 z" />
+    </svg>
+    <a href="${url}" style="color: white;text-decoration: none">
+        <h1>active-home<span style="color: green;font-weight: bold">.org</span> - Xp</h1>
+    </a>
+</header>
+<main style="text-align: center">
+    <comp-view></comp-view>
+    <xp-console style="width:50%;float:left"
+                id="${node}.${id}-xp-console"
+                executor="${node}.${id}"
+                metrics="log.energy">
+    </xp-console>
+    <xp-settings id="${node}.${id}-xp-settings" style="width: 50%;margin-left: 50%;"></xp-settings>
+    <timekeeper-view id="${node}.${id}-timekeeper-view" style="width: 100px;"></timekeeper-view>
+</main>
+
+<script>
+    document.addEventListener('WebComponentsReady', function() {
+        document.querySelector("web-socket").connect();
+    });
+    document.addEventListener('websocket-closed', function() {
+        document.getElementById("ws-icon-path").style.stroke = "#cc0000";
+    });
+    document.addEventListener('websocket-ready', function() {
+        document.getElementById("ws-icon-path").style.stroke = "#008000";
+    });
+</script>
+
+</body>
+</html>

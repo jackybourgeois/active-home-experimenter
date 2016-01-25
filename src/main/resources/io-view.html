@@ -1,0 +1,98 @@
+<!--
+  #%L
+  Active Home :: Experimenter
+  $Id:$
+  $HeadURL:$
+  %%
+  Copyright (C) 2016 Active Home Project
+  %%
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as
+  published by the Free Software Foundation, either version 3 of the 
+  License, or (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public 
+  License along with this program.  If not, see
+  <http://www.gnu.org/licenses/gpl-3.0.html>.
+  #L%
+  -->
+<link rel="import" href="/context/schedule-view.html">
+<link rel="import" href="/${id}/io-ctrl.html">
+
+<dom-module name="io-view">
+
+    <template>
+        <h3>Attributes</h3>
+        <template is="dom-repeat" items="{{attrList}}">
+            <b>{{item.name}}</b>: {{item.value}}<br>
+        </template>
+        <h3>Controls</h3>
+        <io-ctrl commands="{{commands}}" comp-id="{{compId}}"></io-ctrl>
+        <h3>Metrics</h3>
+        <schedule-view id="${node}.${id}-schedule-view" title="Details of {{compId}}'s metrics"
+                       metrics="{{metrics}}"
+                       horizon="86400000"
+                       granularity="3600000"></schedule-view>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'io-view',
+            properties: {
+                compId: {
+                    type: String,
+                    value: ""
+                },
+                metrics: {
+                    type: String,
+                    value: ""
+                },
+                commands: {
+                    type: String,
+                    value: ""
+                },
+                logs: {
+                    type: Array,
+                    value: []
+                }
+            },
+
+            attrList: [],
+
+            ready: function () {
+
+            },
+
+            updateAttributes: function (attrs) {
+                if (attrs.compId != undefined) {
+                    this.compId = attrs.compId;
+                }
+                if (attrs.commands != undefined) {
+                    this.commands = attrs.commands;
+                }
+                var tmpAttrList = [];
+                for (var key in attrs) {
+                    if (key != 'compId' && key != 'metrics' && key != 'commands'
+                            && !key.startsWith("binding") && key != 'description') {
+                        tmpAttrList.push({name: key, value: attrs[key]});
+                    }
+                }
+                this.attrList = tmpAttrList;
+                 if (attrs.metrics != undefined) {
+                     console.log(attrs.metrics);
+                     this.metrics = attrs.metrics;
+                }
+            },
+
+            stop: function () {
+                this.$["${node}.${id}-schedule-view"].stop();
+            }
+
+        });
+    </script>
+</dom-module>

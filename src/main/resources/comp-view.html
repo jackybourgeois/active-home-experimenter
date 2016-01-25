@@ -1,0 +1,132 @@
+<!--
+  #%L
+  Active Home :: Experimenter
+  $Id:$
+  $HeadURL:$
+  %%
+  Copyright (C) 2016 Active Home Project
+  %%
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as
+  published by the Free Software Foundation, either version 3 of the 
+  License, or (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public 
+  License along with this program.  If not, see
+  <http://www.gnu.org/licenses/gpl-3.0.html>.
+  #L%
+  -->
+<link rel="import" href="/bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="/bower_components/paper-button/paper-button.html">
+<link rel="import" href="/bower_components/iron-icon/iron-icon.html">
+<link rel="import" href="/loading-spinner.html">
+<link rel="import" href="/${id}/api-view.html">
+<link rel="import" href="/${id}/euser-view.html">
+<link rel="import" href="/${id}/evaluator-view.html">
+<link rel="import" href="/${id}/io-view.html">
+<link rel="import" href="/${id}/predictor-view.html">
+<link rel="import" href="/${id}/service-view.html">
+<link rel="import" href="/${id}/user-view.html">
+<link rel="import" href="/${id}/scheduler-view.html">
+<link rel="import" href="/store/store-view.html">
+<link rel="import" href="/context/context-view.html">
+
+<dom-module id="comp-view">
+
+    <template>
+        <style>
+            .bg {
+                display: none;
+                position: fixed;
+                z-index: 999;
+                overflow: scroll;
+                margin: auto;
+                top: 50px;
+                left: 50px;
+                bottom: 50px;
+                right: 50px;
+                text-align: left;
+                background-color: rgba(255, 255, 255, 0.9);
+            }
+
+        </style>
+
+        <div id="bg" class="bg">
+            <paper-button class="raised" on-click="hide" style="float:right;color:#CC0000">
+                <iron-icon icon="close"></iron-icon>
+            </paper-button>
+            <header style="margin: 20px">
+                <h3>{{title}} ({{currentType}})</h3>
+                <p>{{description}}</p>
+            </header>
+            <iron-ajax id="ajax" handle-as="json" on-response="handleResponse"></iron-ajax>
+            <loading-spinner id="spinner"></loading-spinner>
+            <div id="view" style="margin: 20px"></div>
+            <span id="result"></span>
+        </div>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'comp-view',
+            title: "",
+            description: "",
+            currentView: "",
+            currentTD: "",
+            viewContainer: null,
+
+            ready: function () {
+                var comp = this;
+                window.addEventListener('select-comp', function (e) {
+                    comp.$.spinner.display();
+                    comp.title = e.detail.compId;
+                    comp.currentTD = e.detail.td;
+                    var ajax = comp.$.ajax;
+                    ajax.method = "GET";
+                    ajax.url = "/${id}/getComponentView/" + e.detail.compId;
+                    comp.fire('sent-ajax', {url: ajax.url});
+                    ajax.generateRequest();
+                });
+            },
+
+            loadView: function (comp) {
+                this.display();
+                var elemName = this.currentTD.toLowerCase() + "-view";
+                var id = "${node}.${id}-" + elemName;
+                this.$.view.innerHTML = '<' + elemName + ' id="' + id + '"><' + elemName + '>';
+                if (comp.description != undefined) {
+                    this.description = comp.description;
+                }
+                this.$.view.children[id].updateAttributes(comp);
+                this.viewContainer = this.$.view.children[id];
+                this.$.spinner.hide();
+            },
+
+            handleResponse: function (e) {
+                var data = e.detail.response;
+                if (data.hasOwnProperty("component")) {
+                    this.loadView(data.component);
+                } else if (data.hasOwnProperty("type") && data.type == "org.activehome.core.object.Error") {
+                    this.$.result.innerHTML = data.details;
+                }
+                this.$.spinner.hide();
+            },
+
+            display: function () {
+                this.$.bg.style.display = "block";
+            },
+
+            hide: function () {
+                this.$.bg.style.display = "none";
+                if (typeof this.viewContainer.stop === "function") {
+                    this.viewContainer.stop();
+                }
+            }
+        });
+    </script>
+</dom-module>

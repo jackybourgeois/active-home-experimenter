@@ -1,0 +1,235 @@
+<!--
+  #%L
+  Active Home :: Experimenter
+  $Id:$
+  $HeadURL:$
+  %%
+  Copyright (C) 2016 Active Home Project
+  %%
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as
+  published by the Free Software Foundation, either version 3 of the 
+  License, or (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public 
+  License along with this program.  If not, see
+  <http://www.gnu.org/licenses/gpl-3.0.html>.
+  #L%
+  -->
+<link rel="import" href="/bower_components/paper-input/paper-input.html">
+<link rel="import" href="/bower_components/paper-button/paper-button.html">
+<link rel="import" href="/bower_components/iron-icon/iron-icon.html">
+<link rel="import" href="/bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="/bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="/loading-spinner.html">
+<link rel="import" href="/${id}/comp-topo.html">
+
+
+<dom-module id="xp-settings">
+
+    <template>
+        <style>
+            #settings {
+                background-color: #FFFFFF;
+                height: 400px;
+                color: #000000;
+                overflow: auto;
+                text-align: left;
+                margin-left: 20px;
+                padding: 20px;
+                -webkit-box-shadow: 0 0 15px rgba(0, 0, 0, 1);
+                -moz-box-shadow: 0 0 15px rgba(0, 0, 0, 1);
+                box-shadow: 0 0 15px rgba(0, 0, 0, 1);
+            }
+
+        </style>
+
+        <iron-ajax id="ajax" handle-as="json" on-response="handleResponse"></iron-ajax>
+        <loading-spinner id="spinner"></loading-spinner>
+
+        <div id="settings">
+            <h2>XP Settings</h2>
+            <comp-topo></comp-topo>
+            <select id="listDataSource" on-change="updateSrc"></select>
+            <select id="listMetrics" multiple></select><br>
+            <label for="predictive">Predictive (Scheduler)</label>
+            <input type="checkbox" id="predictive"/>
+            <label for="reactive">Reactive (Balancer)</label>
+            <input type="checkbox" id="reactive"/><br>
+            <div style="float: left">
+                <label for="listObjectives">Objectives</label><br>
+                <select id="listObjectives" multiple>
+                    <option value="MinimizeExport">Minimize Export</option>
+                    <!--<option value="MinimizeUserDisruption">Minimize User Disruption</option>-->
+                    <!--<option value="MinimizeUserCosts" selected>Minimize User Costs</option>-->
+                    <!--<option value="MinimizeEnvironmentalImpact">Minimize Environmental Impact</option>-->
+                </select>
+            </div>
+
+            <div style="float: left">
+                <label for="listEvaluators">Evaluators</label><br>
+                <select id="listEvaluators" multiple>
+                    <option value="org.activehome.energy.evaluator.energy.EnergyEvaluator" selected>
+                        Energy
+                    </option>
+                    <option value="org.activehome.energy.evaluator.co2.EnvironmentalImpactEvaluator" selected>
+                        Environmental Impact
+                    </option>
+                    <option value="org.activehome.energy.evaluator.cost.CostEvaluator" selected>
+                        Cost
+                    </option>
+                </select>
+            </div>
+
+            <div style="float: left">
+                <label for="listPredictors">Predictors</label><br>
+                <select id="listPredictors" multiple>
+                    <option value="org.activehome.energy.predictor.emulator.EApplianceUsagePredictor" selected>
+                        Emulator Appliance Usage Predictor
+                    </option>
+                    <!--<option value="org.activehome.energy.predictor.ApplianceUsagePredictor" selected>-->
+                        <!--Appliance Usage Predictor-->
+                    <!--</option>-->
+                    <!--<option value="org.activehome.energy.predictor.GenerationPredictor" selected>-->
+                        <!--Generation Predictor-->
+                    <!--</option>-->
+                    <!--<option value="org.activehome.energy.predictor.OverallConsumptionPredictor" selected>-->
+                        <!--Overall Consumption Predictor-->
+                    <!--</option>-->
+                </select>
+            </div>
+
+            <label for="horizon">Horizon</label>
+            <input type="text" value="1d" id="horizon" style="width: 40px">
+            <label for="granularity">Granularity</label>
+            <input type="text" value="1h" id="granularity" style="width: 40px">
+            <br>
+            <paper-button class="raised" on-click="sendData">
+                <iron-icon icon="check"></iron-icon>
+                Set Properties
+            </paper-button>
+            <br>
+            <span id="result"></span>
+        </div>
+
+    </template>
+
+    <script>
+        Polymer({
+            is:'xp-settings',
+            errorMsg: "",
+            dataSrc: [],
+
+            ready: function () {
+                this.loadContent();
+            },
+
+            loadContent: function () {
+                var ajax = this.$.ajax;
+                ajax.method = "GET";
+                ajax.url = "/${id}/getDataSource";
+                this.fire('sent-ajax', {url: ajax.url});
+                ajax.generateRequest();
+            },
+
+            handleResponse: function (e) {
+                var data = e.detail.response;
+                if (data.hasOwnProperty("dataSrc")) {
+                    this.dataSrc = data.dataSrc;
+                    var listDataSrc = this.$.listDataSource;
+                    for (var key in this.dataSrc) {
+                        var option = document.createElement("option");
+                        option.text = key;
+                        option.value = key;
+                        listDataSrc.add(option);
+                        this.updateSrc();
+                    }
+                } else if (data.hasOwnProperty("type") && data.type == "org.activehome.com.error.Error") {
+                    this.$.result.innerHTML = data.details;
+                }
+                this.fire('model-updated', {});
+                this.$.spinner.hide();
+            },
+
+            sendData: function () {
+                var ajax = this.$.ajax;
+                ajax.method = "POST";
+                ajax.url = "/${id}/setProperties";
+
+                var values = {};
+
+                values.source = this.$.listDataSource.value;
+                var metricArray = this.$.listMetrics.getElementsByTagName('option');
+                values.appToStart = [];
+                for (var i = metricArray.length; i--;) {
+                    if (metricArray[i].selected) {
+                        values.appToStart.push(this.dataSrc[values.source][metricArray[i].value]);
+                    }
+                }
+
+                var predictorArray = this.$.listPredictors.getElementsByTagName('option');
+                values.predictors = [];
+                for (i = 0; i<predictorArray.length; i++) {
+                    if (predictorArray[i].selected) {
+                        values.predictors.push(predictorArray[i].value);
+                    }
+                }
+
+                var evaluatorArray = this.$.listEvaluators.getElementsByTagName('option');
+                values.evaluators = [];
+                for (i = 0; i<evaluatorArray.length; i++) {
+                    if (evaluatorArray[i].selected) {
+                        values.evaluators.push(evaluatorArray[i].value);
+                    }
+                }
+
+                values.predictive = this.$.predictive.checked;
+                values.reactive = this.$.reactive.checked;
+                values.horizon = this.$.horizon.value;
+                values.granularity = this.$.granularity.value;
+
+                var options = this.$.listObjectives.getElementsByTagName('option');
+                var val = [];
+                for (var i = 0; i < options.length; i++) {
+                    if (options[i].selected) val.push(options[i].value);
+                }
+                values.objectives = val;
+
+                ajax.body = JSON.stringify({params: values});
+                this.fire('sent-ajax', {url: ajax.url, body: ajax.body});
+                ajax.generateRequest();
+                this.$.spinner.display();
+            },
+
+            removeOptions: function (select) {
+                var i;
+                for (i = select.options.length - 1; i >= 0; i--) {
+                    select.remove(i);
+                }
+            },
+
+            fillAttr: function (select, values) {
+                for (var metric in values) {
+                    var opt = document.createElement("option");
+                    opt.text = metric;
+                    opt.value = metric;
+                    select.add(opt);
+                }
+            },
+
+            updateSrc: function () {
+                var selected = this.$.listDataSource.value;
+                this.removeOptions(this.$.listMetrics);
+                this.fillAttr(this.$.listMetrics, this.dataSrc[selected]);
+            }
+
+        });
+
+
+    </script>
+</dom-module>

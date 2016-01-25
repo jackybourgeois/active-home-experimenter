@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+java -Dnode.name=ah -Dnode.bootstrap=prog/activehome/activehome-energy/org.activehome.energy.emulator.energy.experimenter/src/kevs/main.kevs -jar org.kevoree.platform.standalone-5.2.5.jar
