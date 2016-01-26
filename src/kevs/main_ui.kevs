@@ -140,7 +140,7 @@ bind ah.store.pushResponse chan_sendOutside_http
 bind ah.store.pushRequest chan_getRequest_ws
 bind ah.store.getResponse chan_pushResponse_ws
 
-add ah.experimenter : org.activehome.energy.xp.Experimenter/0.0.1-SNAPSHOT
+add ah.experimenter : org.activehome.experimenter.Experimenter/0.0.1-SNAPSHOT
 set ah.experimenter.urlSQLSource = "jdbc:mysql://localhost:3306/ev?user=demo&password=demo"
 set ah.experimenter.xpFile = "xp.json"
 bind ah.experimenter.time chan_tic_timekeeper

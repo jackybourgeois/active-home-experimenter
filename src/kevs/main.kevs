@@ -63,7 +63,7 @@ bind ah.timekeeper.getRequest chan_getRequest_timekeeper
 bind ah.timekeeper.pushResponse chan_pushResponse_timekeeper
 bind ah.timekeeper.time chan_tic_timekeeper
 
-add ah.experimenter : org.activehome.energy.xp.Experimenter/0.0.1-SNAPSHOT
+add ah.experimenter : org.activehome.experimenter.Experimenter/0.0.1-SNAPSHOT
 set ah.experimenter.urlSQLSource = "jdbc:mysql://localhost:3306/ev?user=demo&password=demo"
 set ah.experimenter.xpFile = "xp.json"
 bind ah.experimenter.time chan_tic_timekeeper
