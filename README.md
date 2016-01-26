@@ -1,4 +1,4 @@
-# activehome-service-experimenter
+# activehome-experimenter
 
 The Experimenter transforms Active Home into a simulator,, allowing to run, replicate and analyse multiple settings.
 
