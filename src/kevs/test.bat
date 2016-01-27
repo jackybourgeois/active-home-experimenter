@@ -1,1 +1,0 @@
-java -Dactivehome.home=\%HOMEPATH%\activehome -Dnode.name=ah -Dnode.bootstrap=%HOMEPATH%\prog\activehome\activehome-energy\org.activehome.energy.xp\src\kevs\main.kevs -jar org.kevoree.platform.standalone-5.2.8.jar
