@@ -72,6 +72,21 @@ import java.util.*;
 @ComponentType
 public class Experimenter extends Service {
 
+    @Param(defaultValue = "An experimenter to play with data in multiple settings.")
+    private String description;
+
+    @Param(defaultValue = "/activehome-experimenter/master/docs/experimenter.png")
+    private String img;
+
+    @Param(defaultValue = "/activehome-experimenter/master/docs/experimenter.md")
+    private String doc;
+
+    @Param(defaultValue = "/activehome-experimenter/master/docs/main_ui.kevs")
+    private String demoScript;
+
+    @Param(defaultValue = "/activehome-experimenter")
+    private String src;
+
     /**
      * Source of the data.
      */
