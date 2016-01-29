@@ -1,4 +1,4 @@
-# activehome-experimenter
+# active-home-experimenter
 
 
 ## Components
