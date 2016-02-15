@@ -24,7 +24,7 @@
 <link rel="import" href="/bower_components/iron-ajax/iron-ajax.html">
 <link rel="import" href="/bower_components/paper-button/paper-button.html">
 <link rel="import" href="/bower_components/iron-icon/iron-icon.html">
-<link rel="import" href="/loading-spinner.html">
+<link rel="import" href="/bower_components/active-home-branding/loading-spinner.html">
 <link rel="import" href="/${id}/api-view.html">
 <link rel="import" href="/${id}/euser-view.html">
 <link rel="import" href="/${id}/evaluator-view.html">
@@ -33,7 +33,7 @@
 <link rel="import" href="/${id}/service-view.html">
 <link rel="import" href="/${id}/user-view.html">
 <link rel="import" href="/${id}/scheduler-view.html">
-<link rel="import" href="/store/store-view.html">
+<link rel="import" href="/catalogue/catalogue-view.html">
 <link rel="import" href="/context/context-view.html">
 
 <dom-module id="comp-view">
@@ -41,32 +41,21 @@
     <template>
         <style>
             .bg {
-                display: none;
-                position: fixed;
-                z-index: 999;
-                overflow: scroll;
-                margin: auto;
-                top: 50px;
-                left: 50px;
-                bottom: 50px;
-                right: 50px;
+                margin: 20px;
                 text-align: left;
-                background-color: rgba(255, 255, 255, 0.9);
+                background-color: #ffffff;
             }
 
         </style>
 
         <div id="bg" class="bg">
-            <paper-button class="raised" on-click="hide" style="float:right;color:#CC0000">
-                <iron-icon icon="close"></iron-icon>
-            </paper-button>
             <header style="margin: 20px">
                 <h3>{{title}} ({{currentType}})</h3>
                 <p>{{description}}</p>
             </header>
             <iron-ajax id="ajax" handle-as="json" on-response="handleResponse"></iron-ajax>
             <loading-spinner id="spinner"></loading-spinner>
-            <div id="view" style="margin: 20px"></div>
+            <div id="view" style="min-height: 700px;margin: 20px"></div>
             <span id="result"></span>
         </div>
     </template>

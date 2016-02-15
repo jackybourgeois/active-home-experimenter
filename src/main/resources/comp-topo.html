@@ -23,12 +23,11 @@
   -->
 <link rel="import" href="/bower_components/iron-ajax/iron-ajax.html">
 <link rel="import" href="/${id}/comp-topo-item.html">
-<link rel="import" href="/loading-spinner.html">
+<link rel="import" href="/bower_components/active-home-branding/loading-spinner.html">
 
 <dom-module id="comp-topo">
 
     <template>
-        <h3>Component topology</h3>
         <iron-ajax id="ajax" handle-as="json" on-response="handleResponse"></iron-ajax>
         <loading-spinner id="spinner"></loading-spinner>
 

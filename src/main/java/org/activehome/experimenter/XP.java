@@ -31,27 +31,23 @@ import org.activehome.com.Request;
 import org.activehome.com.RequestCallback;
 import org.activehome.com.ScheduledRequest;
 import org.activehome.com.ShowIfErrorCallback;
-import org.activehome.com.error.Error;
-import org.activehome.context.data.Schedule;
-import org.activehome.context.data.MetricRecord;
-import org.activehome.context.data.Record;
-import org.activehome.context.data.SampledRecord;
 import org.activehome.context.data.Trigger;
 import org.activehome.evaluator.EvaluationReport;
 import org.activehome.tools.Convert;
 import org.activehome.tools.file.FileHelper;
 import org.kevoree.log.Log;
 
+import java.io.File;
+import java.util.LinkedList;
 import java.util.TreeMap;
 
 /**
- * Mock component to simulate behaviour and test components.
- *
  * @author Jacky Bourgeois
  * @version %I%, %G%
  */
 public class XP {
 
+    protected int zip;
     private JsonObject properties;
     private Experimenter experimenter;
     private long startTS;
@@ -59,12 +55,15 @@ public class XP {
     private int iteration;
     private String src;
     private JsonArray settings;
-    protected int zip;
+    private RequestCallback callbackWhenAllEvalReceived;
 
     private int iterationId;
     private int settingIndex;
     private String resultFileName;
-    private TreeMap<String, TreeMap<Integer, TreeMap<String, String>>> resultMap;
+    /**
+     * map of results: settingName/iteration/eval
+     */
+    private TreeMap<String, TreeMap<Integer, TreeMap<String, LinkedList<EvaluationReport>>>> resultMap;
 
     public XP(final Experimenter experimenter,
               final JsonObject json) {
@@ -82,6 +81,7 @@ public class XP {
         settingIndex = 0;
         iterationId = 0;
 
+        callbackWhenAllEvalReceived = null;
         resultMap = new TreeMap<>();
     }
 
@@ -90,7 +90,7 @@ public class XP {
     }
 
     public JsonObject nextSetting() {
-        if (settingIndex<settings.size()-1) {
+        if (settingIndex < settings.size() - 1) {
             settingIndex++;
             iterationId = 0;
             return settings.get(settingIndex).asObject();
@@ -110,8 +110,7 @@ public class XP {
      * On init of each XP's iteration, subscribe to relevant metrics.
      */
     public final void init() {
-        startTS = startTS - experimenter.getTic().getTimezone() * experimenter.HOUR;
-        String[] metricArray = new String[]{"energy.cons","power.cons.bg.*"};
+        String[] metricArray = new String[]{"energy.cons", "power.cons.bg.*"};
         Request subscriptionReq = new Request(experimenter.getFullId(), experimenter.getNode() + ".context",
                 experimenter.getCurrentTime(), "subscribe", new Object[]{metricArray, experimenter.getFullId()});
 
@@ -119,6 +118,12 @@ public class XP {
         experimenter.sendRequest(subscriptionReq, new ShowIfErrorCallback());
 
         iterationId++;
+        if (resultMap.get(getCurrentSettingName()) == null) {
+            resultMap.put(getCurrentSettingName(), new TreeMap<>());
+        }
+        if (resultMap.get(getCurrentSettingName()).get(iterationId) == null) {
+            resultMap.get(getCurrentSettingName()).put(iterationId, new TreeMap<>());
+        }
         log("initialized.");
     }
 
@@ -137,72 +142,88 @@ public class XP {
     }
 
     /**
-     * On stop time, extract data from db source
-     * and compare with the sum energy.cons
+     * On stop time, check if all evaluation report have been received,
+     * or wait missing eval report
      */
     public final void stop(final RequestCallback callback) {
         log("iteration " + iterationId + " done.");
-        experimenter.getResults(this);
-        callback.success(true);
-    }
-
-    private void eval(String nameEval, RequestCallback callback) {
-        System.out.println("eval " + nameEval);
-        Request evalReq = new Request(experimenter.getFullId(),
-                experimenter.getNode() + "." + nameEval, experimenter.getCurrentTime(),
-                "evaluate", new Object[]{startTS, startTS + getXpDuration()});
-        experimenter.sendRequest(evalReq, new RequestCallback() {
-            @Override
-            public void success(Object obj) {
-                EvaluationReport report = (EvaluationReport) obj;
-                String settingName = getCurrentSettingName();
-                if (!resultMap.containsKey(settingName)) {
-                    resultMap.put(settingName, new TreeMap<>());
-                }
-                if (!resultMap.get(settingName).containsKey(iterationId)) {
-                    resultMap.get(settingName).put(iterationId, new TreeMap<>());
-                }
-                resultMap.get(settingName).get(iterationId).putAll(report.getReportedMetrics());
-                chartSchedule(report.getSchedule(), settingName + "_" + src + "_" + iterationId + "_" + nameEval);
-
-                callback.success(report);
-            }
-
-            @Override
-            public void error(Error error) {
-                log(error.toString());
-            }
-        });
-    }
-
-    public void writeResultLabels() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("src,setting,iteration,startTS,duration");
-        for (String src : resultMap.keySet()) {
-            for (int it : resultMap.get(src).keySet()) {
-                for (String metric : resultMap.get(src).get(it).keySet()) {
-                    sb.append(",").append(metric);
-                }
-                break;
-            }
-            break;
+        if (checkAllEvalHaveBeenReceived()) {
+            callbackWhenAllEvalReceived = null;
+            callback.success(true);
+        } else {
+            callbackWhenAllEvalReceived = callback;
         }
-        FileHelper.logln(sb.toString(), resultFileName);
+    }
+
+    public boolean checkAllEvalHaveBeenReceived() {
+        String genVersion = "";
+        String costVersion = "";
+        String co2Version = "";
+        if (resultMap.get(getCurrentSettingName()).get(iterationId).size() < 3) {
+            log("waiting missing eval, number of eval type not matching the number of evaluator.");
+            return false;
+        }
+        for (String eval : resultMap.get(getCurrentSettingName()).get(iterationId).keySet()) {
+            LinkedList<EvaluationReport> reports = resultMap.get(getCurrentSettingName()).get(iterationId).get(eval);
+            if (!((getXpDuration() / Experimenter.DAY) == reports.size())) {
+                log("waiting missing eval from " + eval + ": "
+                        + reports.size() + " instead of " + (getXpDuration() / Experimenter.DAY));
+                return false;
+            }
+            if (eval.equals("EnergyEvaluator")) {
+                genVersion = reports.getLast().getVersion();
+            } else if (eval.equals("CostEvaluator")) {
+                costVersion = reports.getLast().getVersion();
+            } else if (eval.equals("EnvironmentalImpactEvaluator")) {
+                co2Version = reports.getLast().getVersion();
+            }
+        }
+        if (!genVersion.equals(costVersion)) {
+            log("waiting corrected version of cost eval, genVersion: " + genVersion + " costVersion: " + costVersion);
+            return false;
+        } else if (!genVersion.equals(co2Version)) {
+            log("waiting corrected version of co2 eval, genVersion: " + genVersion + " co2Version: " + co2Version);
+            return false;
+        }
+
+        log("all eval received, we can go to the next xp! genVersion:" + genVersion + " costVersion: " + costVersion);
+        return true;
+    }
+
+    public String resultLabels(final EvaluationReport report) {
+        String labels = "src, setting, iteration, startTS, duration";
+        for (String metric : report.getReportedMetrics().keySet()) {
+            labels += "," + metric;
+        }
+        return labels;
     }
 
     public void saveResults() {
-        StringBuilder sb = new StringBuilder();
+        String folder = experimenter.getSetup().getResultFolder();
         for (String setting : resultMap.keySet()) {
             for (Integer id : resultMap.get(setting).keySet()) {
-                sb.append(getSource()).append(",").append(setting).append(",").append(id).append(",")
-                        .append(startTS).append(",").append(getXpDuration());
-                for (String key : resultMap.get(setting).get(id).keySet()) {
-                    sb.append(",").append(resultMap.get(setting).get(id).get(key));
+                for (String eval : resultMap.get(setting).get(id).keySet()) {
+                    LinkedList<EvaluationReport> reports = resultMap.get(setting).get(id).get(eval);
+                    String fileName = folder + "/" + eval + ".csv";
+                    String results = "";
+                    if (reports != null && reports.size() > 0) {
+                        if (!new File(fileName).exists()) {
+                            results += resultLabels(reports.get(0)) + "\n";
+                        }
+                        for (EvaluationReport report : reports) {
+                            results += getSource() + "," + setting + "," + id + ","
+                                    + experimenter.strLocalTime(report.getSchedule().getStart()) + ","
+                                    + report.getSchedule().getHorizon();
+                            for (String val : report.getReportedMetrics().values()) {
+                                results += "," + val;
+                            }
+                            results += "\n";
+                        }
+                        FileHelper.log(results, fileName);
+                    }
                 }
-                sb.append("\n");
             }
         }
-        FileHelper.log(sb.toString(), resultFileName);
     }
 
     private String getCurrentSettingName() {
@@ -211,56 +232,6 @@ public class XP {
 
     protected final long getXpDuration() {
         return Convert.strDurationToMillisec(nbDays + "d");
-    }
-
-    protected void chartSchedule(final Schedule schedule,
-                                 final String name) {
-        StringBuilder sbFunction = new StringBuilder();
-        StringBuilder sbHtml = new StringBuilder();
-
-        int i = 0;
-        for (String metric : schedule.getMetricRecordMap().keySet()) {
-            MetricRecord mr = schedule.getMetricRecordMap().get(metric);
-            if (mr.getRecords()!=null) {
-                String chartType = "visualization.AreaChart";
-                if (mr.getRecords().getFirst() instanceof SampledRecord) {
-                    chartType = "charts.Bar";
-                }
-                String options = "title: '" + metric + "', legend: {position: 'none'}, bar:{groupWidth: '100%'}";
-                StringBuilder sbData = new StringBuilder();
-                sbData.append("['Time','").append(metric).append("']");
-                for (Record record : mr.getRecords()) {
-                    sbData.append(",[");
-                    sbData.append("new Date(").append(record.getTS() + mr.getStartTime()).append("),");
-                    sbData.append(record.getValue()).append("]");
-                }
-                sbData.append(",[new Date(").append(schedule.getHorizon() + mr.getStartTime())
-                        .append("),  ").append(mr.getLastValue()).append("]");
-
-                sbFunction.append("            var data").append(i).append(" = google.visualization.arrayToDataTable([").append(sbData.toString()).append("]);\n")
-                        .append("            var options").append(i).append(" = {").append(options).append("};\n")
-                        .append("            var chart").append(i).append(" = new google.").append(chartType).append("(document.getElementById('").append(metric).append("'));\n")
-                        .append("            chart").append(i).append(".draw(data").append(i).append(", options").append(i).append(");\n");
-
-                sbHtml.append("<div id=\"").append(metric).append("\" style=\"width: ").append(1500 * getXpDuration() / experimenter.DAY).append("px; height: 300px\"></div>\n");
-            }
-
-            i++;
-        }
-
-        FileHelper.save(coreHtml().replace("${title}", name).replace("${html}", sbHtml)
-                .replace("${func}", sbFunction), name + ".html");
-    }
-
-    private String coreHtml() {
-        return "<html>\n<head><title>${title}</title>" +
-                "    <script type=\"text/javascript\" src=\"https://www.google.com/jsapi?autoload={'modules':[{'name':'visualization','version':'1','packages':['corechart','bar']}]}\"></script>\n" +
-                "    <script type=\"text/javascript\">\n" +
-                "        google.setOnLoadCallback(drawChart);\n" +
-                "        function drawChart() {\n${func}\n}\n" +
-                "    </script>\n" +
-                "</head>\n" +
-                "<body>\n${html}</body></html>";
     }
 
     private void configureTriggers() {
@@ -283,16 +254,15 @@ public class XP {
         Trigger exportTrigger = new Trigger("^power\\.balance$",
                 "(${power.balance}<0)?(-1*${power.balance}):0", "power.export");
 
-        Request triggerReq = new Request(experimenter.getFullId(), experimenter.getNode() + ".context",
-                experimenter.getCurrentTime(), "addTriggers",
+        Request triggerReq = experimenter.buildRequest("context", "addTriggers",
                 new Object[]{new Trigger[]{ctrlGen, bgTrigger, interTrigger, consTrigger, genTrigger,
                         balanceTrigger, importTrigger, exportTrigger}});
         experimenter.sendRequest(triggerReq, new ShowIfErrorCallback());
     }
 
     public void log(String log) {
-        Log.info("[XP " + src + "-" + getCurrentSettingName() + ", iteration: "+ iterationId +"/"+iteration
-                + ", nbDays: " + nbDays + ", startTS" + experimenter.strLocalTime(startTS) + "] " + log);
+        Log.info("[XP " + src + "-" + getCurrentSettingName() + ", iteration: " + iterationId + "/" + iteration
+                + ", nbDays: " + nbDays + "] " + log);
     }
 
     public int getZip() {
@@ -303,11 +273,52 @@ public class XP {
         return properties;
     }
 
-    public TreeMap<String, TreeMap<Integer, TreeMap<String, String>>> getResultMap() {
+    public TreeMap<String, TreeMap<Integer, TreeMap<String, LinkedList<EvaluationReport>>>> getResultMap() {
         return resultMap;
     }
 
     public JsonObject getCurrentSetting() {
         return settings.get(settingIndex).asObject();
+    }
+
+
+    /**
+     * Add a new report to the results
+     *
+     * @param report the new report
+     */
+    public void manageEvaluationReport(final EvaluationReport report) {
+        log("managing new eval report from " + report.getEvaluatorName());
+        TreeMap<String, LinkedList<EvaluationReport>> reportMap
+                = resultMap.get(this.getCurrentSettingName()).get(iterationId);
+
+        // check if previous report for this eval
+        if (reportMap.get(report.getEvaluatorName()) == null) {
+            reportMap.put(report.getEvaluatorName(), new LinkedList<>());
+        }
+
+        // check if existing report for this date, add or replace
+        LinkedList<EvaluationReport> reports = reportMap.get(report.getEvaluatorName());
+        if (reports.size() > 0 && reports.getLast().getSchedule().getStart() == report.getSchedule().getStart()) {
+
+            log("updating report " + report.getEvaluatorName() + " with version " + report.getVersion()
+                    + " current version: " + reports.get(reports.size() - 1).getVersion());
+            reports.set(reports.size() - 1, report);
+            log("updated report " + report.getEvaluatorName() + ": " + reports.get(reports.size() - 1).getVersion());
+        } else {
+            reports.addLast(report);
+        }
+
+        // generate charts of this report
+        String name = report.getEvaluatorName() + "_" + getCurrentSettingName() + "_" + iterationId
+                + "_" + report.getSchedule().getStart();
+        String folder = experimenter.getSetup().getResultFolder();
+        ResultChart.chartSchedule(report.getSchedule(), folder, name);
+
+        if (callbackWhenAllEvalReceived != null) {
+            if (checkAllEvalHaveBeenReceived()) {
+                callbackWhenAllEvalReceived.success(true);
+            }
+        }
     }
 }

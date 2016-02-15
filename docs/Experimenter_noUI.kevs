@@ -1,7 +1,7 @@
 add ah : JavaNode
 set ah.log = "INFO"
 
-add ah.timekeeper : org.activehome.timekeeper.TimeKeeper/0.0.1-SNAPSHOT
+add ah.timekeeper : org.activehome.timekeeper.Timekeeper/0.0.3-SNAPSHOT
 set ah.timekeeper.startDate = "2013-07-19 00:00:00"
 set ah.timekeeper.zipFactor = "x300"
 set ah.timekeeper.showTic = "true"
@@ -17,7 +17,7 @@ bind ah.timekeeper.pushResponse chan_pushResponse_timekeeper
 add chan_pushNotif_timekeeper : AsyncBroadcast
 bind ah.timekeeper.pushNotif chan_pushNotif_timekeeper
 
-add ah.taskScheduler : org.activehome.task.TaskScheduler/0.0.1-SNAPSHOT
+add ah.taskScheduler : org.activehome.task.TaskScheduler/0.0.3-SNAPSHOT
 add chan_toSchedule_taskScheduler : AsyncBroadcast
 add chan_toExecute_taskScheduler : AsyncBroadcast
 
@@ -26,13 +26,13 @@ bind ah.taskScheduler.toSchedule chan_toSchedule_taskScheduler
 bind ah.taskScheduler.toExecute chan_toExecute_taskScheduler
 bind ah.timekeeper.getRequest chan_toExecute_taskScheduler
 
-add ah.linker : org.activehome.linker.Linker/0.0.1-SNAPSHOT
+add ah.linker : org.activehome.linker.Linker/0.0.3-SNAPSHOT
 add chan_getRequest_linker : AsyncBroadcast
 bind ah.linker.getRequest chan_getRequest_linker
 add chan_pushResponse_linker : AsyncBroadcast
 bind ah.linker.pushResponse chan_pushResponse_linker
 
-add ah.context : org.activehome.context.mysql.MySQLContext/0.0.1-SNAPSHOT
+add ah.context : org.activehome.context.mysql.MySQLContext/0.0.3-SNAPSHOT
 set ah.context.urlSQLSource = "jdbc:mysql://localhost:3306/activehome?user=demo&password=demo"
 set ah.context.showNotif = "false"
 bind ah.context.getNotif chan_pushNotif_timekeeper
@@ -63,7 +63,7 @@ bind ah.timekeeper.getRequest chan_getRequest_timekeeper
 bind ah.timekeeper.pushResponse chan_pushResponse_timekeeper
 bind ah.timekeeper.time chan_tic_timekeeper
 
-add ah.experimenter : org.activehome.experimenter.Experimenter/0.0.1-SNAPSHOT
+add ah.experimenter : org.activehome.experimenter.Experimenter/0.0.3-SNAPSHOT
 set ah.experimenter.urlSQLSource = "jdbc:mysql://localhost:3306/ev?user=demo&password=demo"
 set ah.experimenter.xpFile = "xp.json"
 bind ah.experimenter.time chan_tic_timekeeper

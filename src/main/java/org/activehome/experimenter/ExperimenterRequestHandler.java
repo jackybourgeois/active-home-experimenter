@@ -36,6 +36,7 @@ import org.activehome.tools.file.TypeMime;
 import org.activehome.context.data.UserInfo;
 
 import java.util.Date;
+
 /**
  * @author Jacky Bourgeois
  * @version %I%, %G%
@@ -88,57 +89,72 @@ public class ExperimenterRequestHandler implements RequestHandler {
 //        }
     }
 
-    public final void html(final RequestCallback callback) {
-        Request urlWSReq = new Request(service.getFullId(),
-                service.getNode() + ".ws", service.getCurrentTime(), "getURI");
-        service.sendRequest(urlWSReq, new RequestCallback() {
-            public void success(final Object wsURI) {
-                Request urlHTTPReq = new Request(service.getFullId(),
-                        service.getNode() + ".http", service.getCurrentTime(), "getURI");
-                service.sendRequest(urlHTTPReq, new RequestCallback() {
-                    public void success(final Object httpURI) {
-                        String content = FileHelper.fileToString("experimenter.html",
-                                getClass().getClassLoader());
-                        content = content.replaceAll("\\$\\{id\\}", service.getId());
-                        content = content.replaceAll("\\$\\{node\\}", service.getNode());
-                        content = content.replaceAll("\\$\\{\\?t=\\}", "?t=" + new Date().getTime());
-                        content = content.replaceAll("\\$\\{wsURI\\}", wsURI + "");
-                        content = content.replaceAll("\\$\\{url\\}", httpURI + "");
+    public void html(final RequestCallback callback) {
+        JsonObject wrap = new JsonObject();
+        wrap.add("name", "ah-experimenter");
+        wrap.add("url", service.getId() + "/ah-experimenter.html");
+        wrap.add("title", "Active Home - Experimenter");
+        wrap.add("description", "Active Home Experimenter");
 
-                        JsonObject json = new JsonObject();
-                        json.add("content", content);
-                        json.add("mime", "text/html");
-                        callback.success(json);
-                    }
-
-                    public void error(final Error result) {
-                        callback.error(result);
-                    }
-                });
-            }
-
-            public void error(final Error result) {
-                callback.error(result);
-            }
-        });
-    }
-
-    public final Object file(final String fileName) {
-        String content = FileHelper.fileToString(fileName, getClass().getClassLoader());
-        if (fileName.endsWith(".html")) {
-            content = content.replaceAll("\\$\\{id\\}", service.getId());
-            content = content.replaceAll("\\$\\{node\\}", service.getNode());
-        }
         JsonObject json = new JsonObject();
-        json.add("content", content);
-        json.add("mime", TypeMime.valueOf(fileName.substring(
-                fileName.lastIndexOf(".") + 1, fileName.length())).getDesc());
-        return json;
+        json.add("wrap", wrap);
+        callback.success(json);
     }
+
+    public final void file(final String fileName,
+                           final RequestCallback callback) {
+        if (fileName.endsWith("ah-experimenter.html")) {
+            Request urlWSReq = new Request(service.getFullId(),
+                    service.getNode() + ".ws", service.getCurrentTime(), "getURI");
+            service.sendRequest(urlWSReq, new RequestCallback() {
+                public void success(final Object wsURI) {
+                    Request urlHTTPReq = new Request(service.getFullId(),
+                            service.getNode() + ".http", service.getCurrentTime(), "getURI");
+                    service.sendRequest(urlHTTPReq, new RequestCallback() {
+                        public void success(final Object httpURI) {
+                            String content = FileHelper.fileToString("ah-experimenter.html",
+                                    getClass().getClassLoader());
+                            content = content.replaceAll("\\$\\{id\\}", service.getId());
+                            content = content.replaceAll("\\$\\{node\\}", service.getNode());
+                            content = content.replaceAll("\\$\\{\\?t=\\}", "?t=" + new Date().getTime());
+                            content = content.replaceAll("\\$\\{wsURI\\}", wsURI + "");
+                            content = content.replaceAll("\\$\\{url\\}", httpURI + "");
+
+                            JsonObject json = new JsonObject();
+                            json.add("content", content);
+                            json.add("mime", "text/html");
+                            callback.success(json);
+                        }
+
+                        public void error(final Error result) {
+                            callback.error(result);
+                        }
+                    });
+                }
+
+                public void error(final Error result) {
+                    callback.error(result);
+                }
+            });
+        } else {
+            String content = FileHelper.fileToString(fileName, getClass().getClassLoader());
+            if (fileName.endsWith(".html")) {
+                content = content.replaceAll("\\$\\{id\\}", service.getId());
+                content = content.replaceAll("\\$\\{node\\}", service.getNode());
+            }
+            JsonObject json = new JsonObject();
+            json.add("content", content);
+            json.add("mime", TypeMime.valueOf(fileName.substring(
+                    fileName.lastIndexOf(".") + 1, fileName.length())).getDesc());
+            callback.success(json);
+        }
+    }
+
 
     public void setProperties(final JsonObject properties,
                               final RequestCallback callback) {
-        service.setProperties(properties, (UserInfo) request.getEnviElem().get("userInfo"), callback);
+        service.getSetup().setProperties(properties,
+                (UserInfo) request.getEnviElem().get("userInfo"), callback);
     }
 
     public JsonValue getDataSource() {
