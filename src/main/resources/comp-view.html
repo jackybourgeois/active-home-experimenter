@@ -23,6 +23,7 @@
   -->
 <link rel="import" href="/bower_components/iron-ajax/iron-ajax.html">
 <link rel="import" href="/bower_components/paper-button/paper-button.html">
+<link rel="import" href="/bower_components/paper-card/paper-card.html">
 <link rel="import" href="/bower_components/iron-icon/iron-icon.html">
 <link rel="import" href="/bower_components/active-home-branding/loading-spinner.html">
 <link rel="import" href="/${id}/api-view.html">
@@ -39,16 +40,7 @@
 <dom-module id="comp-view">
 
     <template>
-        <style>
-            .bg {
-                margin: 20px;
-                text-align: left;
-                background-color: #ffffff;
-            }
-
-        </style>
-
-        <div id="bg" class="bg">
+        <paper-card id="bg" style="margin: 20px;width: 100%">
             <header style="margin: 20px">
                 <h3>{{title}} ({{currentType}})</h3>
                 <p>{{description}}</p>
@@ -57,7 +49,7 @@
             <loading-spinner id="spinner"></loading-spinner>
             <div id="view" style="min-height: 700px;margin: 20px"></div>
             <span id="result"></span>
-        </div>
+        </paper-card>
     </template>
 
     <script>

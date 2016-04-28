@@ -188,16 +188,16 @@ public class XpSetup {
         boolean reactive = setting.get("reactive") != null && setting.get("reactive").asBoolean();
         boolean collab = setting.get("collab") != null && setting.get("collab").asBoolean();
 
+        componentToInstall.addAll(setupAppliances(properties));
+        componentToInstall.addAll(setupEvaluators(properties));
+        componentToInstall.addAll(setupGridAndFM(properties));
+
         if (predictive) {
             componentToInstall.addAll(setupPredictive(properties, collab));
         }
         if (reactive) {
             componentToInstall.addAll(setupReactive(properties, collab));
         }
-
-        componentToInstall.addAll(setupAppliances(properties));
-        componentToInstall.addAll(setupEvaluators(properties));
-        componentToInstall.addAll(setupGridAndFM(properties));
 
         applyChanges(properties, userInfo, callback);
     }
@@ -233,7 +233,7 @@ public class XpSetup {
                                                           final boolean collab) {
         LinkedList<ComponentProperties> compPropList = new LinkedList<>();
         JsonObject attr = new JsonObject();
-        compPropList.add(new ComponentProperties("org.activehome.energy.balancer.PowerBalancer",
+        compPropList.add(new ComponentProperties("org.activehome.energy.balancer.PowerBalancer/0.0.4-SNAPSHOT",
                 "balancer", attr, new String[]{}));
         return compPropList;
     }
