@@ -34,6 +34,8 @@ bind ah.linker.pushResponse chan_pushResponse_linker
 
 add ah.http : org.activehome.api.http.HttpAPI/0.0.3-SNAPSHOT
 set ah.http.address = "localhost"
+set ah.http.port = "9999"
+set ah.http.isHttps = "false"
 bind ah.http.time chan_tic_timekeeper
 add chan_sendOutside_http : AsyncBroadcast
 bind ah.http.sendOutside chan_sendOutside_http
@@ -56,7 +58,7 @@ bind ah.timekeeper.pushResponse chan_getResponse_http
 
 add ah.ws : org.activehome.api.ws.WsAPI/0.0.3-SNAPSHOT
 set ah.ws.address = "localhost"
-//set ah.ws.isWss = "false"
+set ah.ws.isWss = "false"
 bind ah.ws.time chan_tic_timekeeper
 add chan_sendOutside_ws : AsyncBroadcast
 bind ah.ws.sendOutside chan_sendOutside_ws
