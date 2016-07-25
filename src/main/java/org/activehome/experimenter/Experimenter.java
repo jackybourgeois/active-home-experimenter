@@ -32,24 +32,22 @@ import org.activehome.com.*;
 import org.activehome.com.error.Error;
 import org.activehome.com.error.ErrorType;
 import org.activehome.context.data.ComponentProperties;
-import org.activehome.context.data.MetricRecord;
-import org.activehome.context.data.Schedule;
+import org.activehome.context.data.UserInfo;
 import org.activehome.context.helper.ModelHelper;
 import org.activehome.evaluator.EvaluationReport;
 import org.activehome.mysql.HelperMySQL;
-import org.activehome.service.Service;
 import org.activehome.service.RequestHandler;
-import org.activehome.tools.file.FileHelper;
-import org.activehome.context.data.UserInfo;
-import org.kevoree.annotation.*;
-import org.kevoree.Package;
-import org.kevoree.api.BootstrapService;
-import org.kevoree.ContainerRoot;
+import org.activehome.service.Service;
+import org.kevoree.annotation.ComponentType;
+import org.kevoree.annotation.Input;
+import org.kevoree.annotation.Output;
+import org.kevoree.annotation.Param;
 import org.kevoree.api.handler.UUIDModel;
 import org.kevoree.factory.DefaultKevoreeFactory;
 import org.kevoree.factory.KevoreeFactory;
 import org.kevoree.log.Log;
 import org.kevoree.pmodeling.api.ModelCloner;
+import org.kevoree.ContainerRoot;
 import org.kevoree.ContainerNode;
 import org.kevoree.TypeDefinition;
 import org.kevoree.ComponentInstance;
@@ -57,12 +55,14 @@ import org.kevoree.ComponentInstance;
 import org.kevoree.DictionaryType;
 import org.kevoree.DictionaryAttribute;
 
-
 import java.io.File;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author Jacky Bourgeois
@@ -71,11 +71,12 @@ import java.util.*;
 @ComponentType
 public class Experimenter extends Service {
 
+    @Output
+    protected org.kevoree.api.Port toSchedule;
     @Param(defaultValue = "An experimenter to play with data in multiple settings.")
     private String description;
     @Param(defaultValue = "/active-home-experimenter")
     private String src;
-
     /**
      * Source of the data.
      */
@@ -86,10 +87,6 @@ public class Experimenter extends Service {
      */
     @Param(defaultValue = "")
     private String xpFile;
-
-    @Output
-    protected org.kevoree.api.Port toSchedule;
-
     private XpCtrl ctrl;
     private XpSetup setup;
 
@@ -107,11 +104,16 @@ public class Experimenter extends Service {
     @Override
     public void modelUpdated() {
         if (isFirstModelUpdate()) {
-            registerXPUser();
             listenAPI(getNode() + ".http", "/experimenter", true);
 
-            setup = new XpSetup(this, urlSQLSource, xpFile);
+            File xp = new File(System.getProperty("active-home.home") + "/" + xpFile);
+            if (xp.exists() && xp.isFile()) {
+                setup = new XpSetup(this, urlSQLSource, xp);
+            } else {
+                setup = new XpSetup(this);
+            }
             ctrl = new XpCtrl(this, setup);
+            registerXPUser();
 
             setup.setupUser(new RequestCallback() {
                 @Override
@@ -124,6 +126,7 @@ public class Experimenter extends Service {
                     logError(error.toString());
                 }
             });
+
         }
         super.modelUpdated();
     }
@@ -142,18 +145,20 @@ public class Experimenter extends Service {
     @Override
     public void onStopTime() {
         super.onStopTime();
-        ctrl.getCurrentXP().stop(new RequestCallback() {
-            @Override
-            public void success(Object o) {
-                logInfo("XP done.");
-                ctrl.runNextXp();
-            }
+        if (ctrl.getCurrentXP()!=null) {
+            ctrl.getCurrentXP().stop(new RequestCallback() {
+                @Override
+                public void success(Object o) {
+                    logInfo("XP done.");
+                    ctrl.runNextXp();
+                }
 
-            @Override
-            public void error(Error error) {
-                logError(error.toString());
-            }
-        });
+                @Override
+                public void error(Error error) {
+                    logError(error.toString());
+                }
+            });
+        }
     }
 
     // inputs
@@ -182,6 +187,7 @@ public class Experimenter extends Service {
 
     /**
      * Recieve notification of new evaluation report
+     *
      * @param notifStr notif as String
      */
     @Input
@@ -339,7 +345,7 @@ public class Experimenter extends Service {
      */
     protected UserInfo xpUser() {
         return new UserInfo("xpuser", new String[]{"admin,user"},
-                "ah", "org.activehome.user.emulator.EUser/0.0.4-SNAPSHOT");
+                "ah", setup.getUserType());
     }
 
     /**
@@ -348,7 +354,7 @@ public class Experimenter extends Service {
     private void registerXPUser() {
         sendRequest(new Request(getFullId(), getNode() + ".auth", getCurrentTime(),
                         "register", new Object[]{"xpuser", "xpuser", getNode(), "admin,user",
-                        "org.activehome.user.emulator.EUser/0.0.4-SNAPSHOT"}),
+                        setup.getUserType()}),
                 new ShowIfErrorCallback());
     }
 
@@ -379,5 +385,16 @@ public class Experimenter extends Service {
 
     public XpCtrl getCtrl() {
         return ctrl;
+    }
+
+    public LinkedList<String> extractCmdArgs(final String cmdStr) {
+        LinkedList<String> matchList = new LinkedList<>();
+        // catch: arg="dbquotes with space" arg='quotes with space' argAlone (including arg=val) 'quote alone' "dbquotes alone"
+        Pattern regex = Pattern.compile("(([^\\s\"'=]+)(=)(\"([^\"]*)\"))|(([^\\s\"'=]+)(=)('([^']*)'))|([^\\s\"']+)|(\"([^\"]*)\")|('([^']*)')");
+        Matcher regexMatcher = regex.matcher(cmdStr);
+        while (regexMatcher.find()) {
+            matchList.add(regexMatcher.group());
+        }
+        return matchList;
     }
 }

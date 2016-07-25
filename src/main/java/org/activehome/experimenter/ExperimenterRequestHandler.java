@@ -30,12 +30,14 @@ import com.eclipsesource.json.JsonValue;
 import org.activehome.com.Request;
 import org.activehome.com.RequestCallback;
 import org.activehome.com.error.Error;
+import org.activehome.com.error.ErrorType;
 import org.activehome.service.RequestHandler;
 import org.activehome.tools.file.FileHelper;
 import org.activehome.tools.file.TypeMime;
 import org.activehome.context.data.UserInfo;
 
 import java.util.Date;
+import java.util.LinkedList;
 
 /**
  * @author Jacky Bourgeois
@@ -65,10 +67,10 @@ public class ExperimenterRequestHandler implements RequestHandler {
     // init start="2013-07-01 00:00:00" end="2013-07-03 00:00:00" zip="x300" src="48" adaptation="RPCollab"
     public final void execute(final String cmdStr,
                               final RequestCallback callback) {
-//        LinkedList<String> paramList = service.extractCmdArgs(cmdStr);
-//        if (paramList.size() >= 0) {
-//            String method = paramList.pollFirst();
-//            switch (method) {
+        LinkedList<String> paramList = service.extractCmdArgs(cmdStr);
+        if (paramList.size() >= 0) {
+            String method = paramList.pollFirst();
+            switch (method) {
 //                case "init":
 //                    service.initXp(paramList, (UserInfo) request.getEnviElem().get("userInfo"), callback);
 //                    break;
@@ -81,12 +83,12 @@ public class ExperimenterRequestHandler implements RequestHandler {
 //                case "get":
 //                    service.getContext(paramList, callback);
 //                    break;
-//                default:
-//                    callback.error(new Error(ErrorType.NO_SUCH_METHOD, "Unknown command " + method));
-//            }
-//        } else {
-//            callback.error(new Error(ErrorType.NO_SUCH_METHOD, "Empty request"));
-//        }
+                default:
+                    callback.error(new Error(ErrorType.NO_SUCH_METHOD, "Unknown command " + method));
+            }
+        } else {
+            callback.error(new Error(ErrorType.NO_SUCH_METHOD, "Empty request"));
+        }
     }
 
     public void html(final RequestCallback callback) {

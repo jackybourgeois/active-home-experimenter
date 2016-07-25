@@ -37,7 +37,6 @@ import org.activehome.context.data.UserInfo;
 import org.activehome.tools.file.FileHelper;
 
 import java.io.File;
-import java.util.Date;
 import java.util.LinkedList;
 
 /**
@@ -46,19 +45,29 @@ import java.util.LinkedList;
  */
 public class XpSetup {
 
+    private final static String DEFAULT_USER = "org.activehome.user.User/0.0.3-SNAPSHOT";
+
     private Experimenter exper;
     private String urlSQLSource;
-    private String xpFile;
+    private File xpFile;
     private String resultFolder;
+    private String userType;
     private LinkedList<ComponentProperties> componentToInstall;
 
     public XpSetup(final Experimenter experimenter,
                    final String urlSQLSource,
-                   final String xpFile) {
+                   final File xpFile) {
         exper = experimenter;
         this.xpFile = xpFile;
         this.urlSQLSource = urlSQLSource;
         componentToInstall = new LinkedList<>();
+        initFolder();
+    }
+
+    public XpSetup(final Experimenter experimenter) {
+        exper = experimenter;
+        componentToInstall = new LinkedList<>();
+        xpFile = null;
         initFolder();
     }
 
@@ -70,9 +79,13 @@ public class XpSetup {
 
     LinkedList<XP> loadXPProperties() {
         LinkedList<XP> xpList = new LinkedList<>();
-        JsonObject jsonXpdetails = JsonObject.readFrom(FileHelper.fileToString(
-                new File(System.getProperty("active-home.home") + "/" + xpFile)));
+        if (xpFile == null) {
+            userType = DEFAULT_USER;
+            return xpList;
+        }
+        JsonObject jsonXpdetails = JsonObject.readFrom(FileHelper.fileToString(xpFile));
         JsonObject sources = jsonXpdetails.get("sources").asObject();
+        userType = jsonXpdetails.getString("user", DEFAULT_USER);
         for (String src : sources.names()) {
             for (JsonValue period : jsonXpdetails.get("sources").asObject().get(src).asArray()) {
                 JsonObject jsonXp = period.asObject();
@@ -151,6 +164,10 @@ public class XpSetup {
         } else {
             callback.success(true);
         }
+    }
+
+    public String getUserType() {
+        return userType;
     }
 
     public void setupUser(final RequestCallback callback) {
