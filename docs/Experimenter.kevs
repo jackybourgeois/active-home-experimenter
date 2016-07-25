@@ -126,7 +126,7 @@ bind ah.timekeeper.time chan_tic_timekeeper
 
 add ah.experimenter : org.activehome.experimenter.Experimenter/0.0.3-SNAPSHOT
 set ah.experimenter.urlSQLSource = "jdbc:mysql://localhost:3306/ev?user=demo&password=demo"
-set ah.experimenter.xpFile = "xp.json"
+set ah.experimenter.xpFile = ""
 bind ah.experimenter.time chan_tic_timekeeper
 bind ah.experimenter.pushRequest chan_getRequest_timekeeper
 bind ah.experimenter.getResponse chan_pushResponse_timekeeper
@@ -170,6 +170,17 @@ add chan_getResponse_auth : AsyncBroadcast
 bind ah.auth.getResponse chan_getResponse_auth
 bind ah.context.pushResponse chan_getResponse_auth
 bind ah.auth.pushNotif chan_getNotif_context
+
+add ah.catalogue : org.activehome.catalogue.Catalogue/0.0.3-SNAPSHOT
+bind ah.catalogue.time chan_tic_timekeeper
+bind ah.catalogue.getRequest chan_pushRequest_http
+bind ah.catalogue.pushRequest chan_getRequest_http
+bind ah.catalogue.getResponse chan_pushResponse_http
+bind ah.catalogue.pushResponse chan_sendOutside_http
+bind ah.catalogue.pushRequest chan_getRequest_ws
+bind ah.catalogue.getResponse chan_pushResponse_ws
+bind ah.catalogue.pushRequest chan_getRequest_linker
+bind ah.catalogue.getResponse chan_pushResponse_linker
 
 add sync : WSGroup
 attach ah sync
